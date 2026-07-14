@@ -1,8 +1,27 @@
+# ⚡ Debian / Ubuntu 一键安装 XanMod BBRv3 & 智能网络调优
+
+一款专为 **Debian 12/13** 以及 **Ubuntu 20.04/22.04/24.04/26.04 (LTS)** 深度定制的 BBRv3 一键安装、升级与多场景网络队列调度（qdisc）调优工具。
+
+---
+
+## 🚀 极速一键运行
+
+使用 `root` 用户登录您的服务器，复制并运行以下命令：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/ZhangSir9901/BBRv3-Onekey/main/bbr3.sh)
+```
+
+---
+
+## 📄 脚本源码 (bbr3.sh)
+
+````bash
 #!/bin/bash
 
 # ====================================================================
-# 项目名称: Debian 12/13 XanMod BBRv3 智能生命周期管理脚本 (终极高亮版)
-# 支持系统: Debian 12 (bookworm) / Debian 13 (trixie)
+# 项目名称: Debian/Ubuntu XanMod BBRv3 智能生命周期管理脚本 (双系统兼容版)
+# 支持系统: Debian 12/13, Ubuntu 20.04/22.04/24.04/26.04 (LTS)
 # ====================================================================
 
 # 颜色定义
@@ -25,9 +44,16 @@ fi
 
 . /etc/os-release
 
-# 限制仅支持 Debian 12 和 13
-if [ "$ID" != "debian" ] || { [ "$VERSION_ID" != "12" ] && [ "$VERSION_ID" != "13" ]; }; then
-    echo -e "${RED}[错误] 本脚本仅支持 Debian 12 (bookworm) 和 Debian 13 (trixie)！${PLAIN}"
+# 限制支持 Debian 12/13 和 Ubuntu LTS 版本
+SUPPORTED=false
+if [ "$ID" = "debian" ] && { [ "$VERSION_ID" = "12" ] || [ "$VERSION_ID" = "13" ]; }; then
+    SUPPORTED=true
+elif [ "$ID" = "ubuntu" ] && { [ "$VERSION_ID" = "20.04" ] || [ "$VERSION_ID" = "22.04" ] || [ "$VERSION_ID" = "24.04" ] || [ "$VERSION_ID" = "26.04" ]; }; then
+    SUPPORTED=true
+fi
+
+if [ "$SUPPORTED" = "false" ]; then
+    echo -e "${RED}[错误] 本脚本仅支持 Debian 12/13 以及 Ubuntu LTS (20.04/22.04/24.04/26.04)！${PLAIN}"
     echo -e "${YELLOW}当前系统为: ${ID} ${VERSION_ID:-未知版本}${PLAIN}"
     exit 1
 fi
@@ -106,9 +132,9 @@ else
     RECOMMENDED_TIP="您的 VPS 位于【美欧/远距离区】，已为您高亮推荐 2 和 4 方案。"
 fi
 
-# 5. 自动匹配内核包名称
+# 5. 自动匹配内核包名称 (Debian 12 强制 LTS，Debian 13 及 Ubuntu 全系列使用 MAIN 分支)
 CODENAME=$VERSION_CODENAME
-if [ "$VERSION_ID" = "12" ]; then
+if [ "$ID" = "debian" ] && [ "$VERSION_ID" = "12" ]; then
     KERNEL_PKG="linux-xanmod-lts-x64v3"
 else
     KERNEL_PKG="linux-xanmod-x64v3"
@@ -145,7 +171,7 @@ clean_sysctl() {
     sed -i '/net.ipv4.tcp_dsack/d' /etc/sysctl.conf
 }
 
-# 8. 闭合状态体检菜单项
+# 8. 状态体检验证功能
 verify_status() {
     clear
     echo -e "${BLUE}==================================================${PLAIN}"
@@ -200,9 +226,9 @@ while true; do
     fi
 
     echo -e "${BLUE}==================================================${PLAIN}"
-    echo -e "       Debian 12/13 XanMod BBRv3 一体化部署脚本"
+    echo -e "    Debian/Ubuntu XanMod BBRv3 一体化部署脚本"
     echo -e "${BLUE}==================================================${PLAIN}"
-    echo -e "当前系统：${GREEN}Debian ${VERSION_ID} (${CODENAME})${PLAIN}"
+    echo -e "当前系统：${GREEN}${NAME} ${VERSION_ID} (${CODENAME})${PLAIN}"
     echo -e "VPS位置 ：${GREEN}${COUNTRY_NAME} (${COUNTRY_CODE})${PLAIN}"
     if [ "$ALREADY_XANMOD" = "true" ]; then
         echo -e "当前内核：${YELLOW}${CURRENT_KERNEL} (已是XanMod)${PLAIN}"
@@ -297,7 +323,7 @@ case "$CHOICE" in
         ;;
 esac
 
-# 10. 开始执行源配置与更新 (深度修复：UA伪装突破 403 拦截)
+# 10. 开始执行源配置与更新
 echo -e "\n${BLUE}[3/5] 开始配置 XanMod 官方存储库...${PLAIN}"
 rm -f /etc/apt/sources.list.d/xanmod-release.list
 
@@ -307,18 +333,18 @@ rm -f "$TMP_KEY"
 
 echo -e "${YELLOW}正在获取 XanMod PGP 密钥 (引入反反爬虫伪装机制)...${PLAIN}"
 
-# 构造极度逼真且不易被封锁的 User-Agent 标头
+# 构造极度逼真的 Windows Chrome 浏览器 User-Agent，规避 Cloudflare 403 拦截
 FAKE_UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
-# 冗余策略 1: curl 伪装 UA 下载 (错误重定向到垃圾桶 2>/dev/null)
+# 冗余策略 1: curl 伪装 UA 下载
 curl -fsSL -A "${FAKE_UA}" --connect-timeout 10 --retry 3 https://dl.xanmod.org/archive.key -o "$TMP_KEY" 2>/dev/null
 
-# 冗余策略 2: wget 伪装 UA 下载 (错误重定向到垃圾桶 2>/dev/null)
+# 冗余策略 2: wget 伪装 UA 下载
 if [ ! -s "$TMP_KEY" ] || ! grep -q "PGP PUBLIC KEY" "$TMP_KEY"; then
     wget -qO "$TMP_KEY" -U "${FAKE_UA}" --timeout=10 --tries=3 https://dl.xanmod.org/archive.key >/dev/null 2>&1
 fi
 
-# 冗余策略 3: curl 强制 IPv4 + 伪装 UA (错误重定向到垃圾桶 2>/dev/null)
+# 冗余策略 3: curl 强制 IPv4 + 伪装 UA (绕过某些厂商的 IPv6 黑洞)
 if [ ! -s "$TMP_KEY" ] || ! grep -q "PGP PUBLIC KEY" "$TMP_KEY"; then
     curl -fsSL -4 -A "${FAKE_UA}" --connect-timeout 10 --retry 3 https://dl.xanmod.org/archive.key -o "$TMP_KEY" 2>/dev/null
 fi
@@ -335,6 +361,7 @@ else
     exit 1
 fi
 
+# 动态根据当前系统写入源文件（不管是 debian 还是 ubuntu，均能完美识别代号）
 echo "deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org ${CODENAME} main" | tee /etc/apt/sources.list.d/xanmod-release.list
 
 # 执行源更新
@@ -391,7 +418,7 @@ clear
 echo -e "${GREEN}==================================================${PLAIN}"
 echo -e "          🎉 内核配置与网络调优执行完毕！"
 echo -e "${GREEN}==================================================${PLAIN}"
-echo -e "当前系统：${BLUE}Debian ${VERSION_ID} ${CODENAME}${PLAIN}，VPS位置：${BLUE}${COUNTRY_NAME}${PLAIN}；"
+echo -e "当前系统：${BLUE}${NAME} ${VERSION_ID} ${CODENAME}${PLAIN}，VPS位置：${BLUE}${COUNTRY_NAME}${PLAIN}；"
 echo -e "部署内核：${BLUE}${KERNEL_PKG}${PLAIN}；"
 echo -e "使用场景：${BLUE}${SCENARIO}${PLAIN}；"
 echo -e "调优配置：${BLUE}${CONFIG_SUMMARY}${PLAIN}。"
@@ -416,3 +443,4 @@ else
     echo -e "您可立即使用再次运行本脚本选项 5 进行实时验证。${PLAIN}"
     echo -e "${GREEN}==================================================${PLAIN}"
 fi
+```
