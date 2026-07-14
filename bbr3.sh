@@ -1,21 +1,3 @@
-# ⚡ Debian / Ubuntu 一键安装 XanMod BBRv3 & 智能网络调优
-
-一款专为 **Debian 12/13** 以及 **Ubuntu 20.04/22.04/24.04/26.04 (LTS)** 深度定制的 BBRv3 一键安装、升级与多场景网络队列调度（qdisc）调优工具。
-
----
-
-## 🚀 极速一键运行
-
-使用 `root` 用户登录您的服务器，复制并运行以下命令：
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/ZhangSir9901/BBRv3-Onekey/main/bbr3.sh)
-```
-
----
-
-## 📄 脚本源码 (bbr3.sh)
-
 ````bash
 #!/bin/bash
 
